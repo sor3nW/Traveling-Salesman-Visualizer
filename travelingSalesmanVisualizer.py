@@ -75,17 +75,23 @@ def draw(grid, nodes, minimum, percent):
     drawBoxes(grid)
     drawLines(nodes)
     pygame.draw.line(screen, BLACK, (0, screenWidth), (screenWidth, screenWidth))
+    renderText(minimum, percent)
+    pygame.display.flip()
+
+def drawing(grid):
+    drawBoxes(grid)
+    pygame.draw.line(screen, BLACK, (0, screenWidth), (screenWidth, screenWidth))
+
+def renderText(minimum, percent):
     text1 = font.render("percent finished: ", False, BLACK)
     text2 = font.render("minimum distance: ", False, BLACK)
-    screen.blit(text1, (100, screenWidth+100))
-    screen.blit(text2, (100, screenWidth+50))
+    screen.blit(text1, (100, screenWidth + 100))
+    screen.blit(text2, (100, screenWidth + 50))
     text3 = font.render(f"{minimum}", False, BLACK)
     format_float = "{:.2f}".format(percent)
     text4 = font.render(f"{format_float}", False, BLACK)
-    screen.blit(text3, (300, screenWidth+50))
-    screen.blit(text4, (300, screenWidth+100))
-    pygame.display.flip()
-
+    screen.blit(text3, (300, screenWidth + 50))
+    screen.blit(text4, (300, screenWidth + 100))
 
 def get_pos(x, y):
     newx = x // diff
@@ -110,28 +116,54 @@ def heuristic(p1, p2):
 def drawLines(nodes):
     for i in range(len(nodes)-1):
         pygame.draw.line(screen, PURPLE, (nodes[i].row * diff + (diff/2), nodes[i].col * diff + diff/2), (nodes[i+1].row * diff + diff/2, nodes[i+1].col * diff + diff/2), 10)
+
 def calcTotalDistance(nodes):
     total = 0
     for i in range(len(nodes)-1):
         distance = heuristic(nodes[i],  nodes[i+1])
         total += distance
     return total
+
 def factorial(num):
     if num in [0,1]:
         return 1
     else:
         return num * factorial(num-1)
 
-def TSP(nodes, count, minimum):
-    percentage = (count / factorial(len(nodes))) * 100
-    total = factorial(len(nodes))
-    dist = calcTotalDistance(nodes)
-    newNodes = [0 for i in range(len(nodes))]
-    for i in range(len(nodes)):
-        newNodes[i+1] = nodes[i]
-        newNodes[:i] = nodes[:i]
-        newNodes[i:] = nodes[i:]
 
+def TSP(nodes, minimum, totalcount, lowest):
+
+    totalcount = totalcount
+    total = factorial(len(nodes))
+    percentage = (totalcount/total) * 100
+    lowestPath = lowest
+    current = nodes
+    print(str(current) + "current")
+    for i in range(len(nodes)-1):
+
+        val2 = current.pop(i+1)
+        val = current.pop(i)
+        current = [val2] + [val] + current
+        print(current)
+
+        totalcount += 1
+        percentage = (totalcount/total) * 100
+        dist = calcTotalDistance(current)
+
+        if dist < minimum:
+            minimum = dist
+            lowestPath = current
+
+        draw(grid, current, minimum, percentage)
+
+        if totalcount >= total:
+            return lowestPath, minimum, percentage
+
+        if i == len(nodes)-1:
+            print("\n")
+            lowestPath, minimum, percentage = TSP(current, minimum, totalcount, lowestPath)
+
+    return lowestPath, minimum, percentage
 
 
 
@@ -142,9 +174,10 @@ def TSP(nodes, count, minimum):
 grid = gridAndNeighbors()
 percentage = 0
 minimumDistance = float("inf")
+totalNodes = 3
 nodes = []
 ready = True
-flag2 = False
+flag2 = True
 flag1 = False
 let = None
 run = True
@@ -161,15 +194,18 @@ while run:
                 nodes = []
                 minimumDistance = float("inf")
                 percentage = 0
+                flag2 = True
 
             if event.key == pygame.K_1 and ready:
                 count =  0
-                while count < 5:
+                while count < totalNodes:
                     node = fillrandom(grid)
                     if node:
                         count += 1
                         nodes.append(node)
                 ready = False
+                minimumDistance = calcTotalDistance(nodes)
+
 
 
 
@@ -187,13 +223,10 @@ while run:
 
 
     draw(grid, nodes, minimumDistance, percentage)
-    if flag1:
-        count = 1
-        percentage, dist = TSP(nodes, count)
-        count += 1
-        minimumDistance = min(dist, minimumDistance)
+    if flag1 and flag2:
 
+        nodes, minimumDistance, percentage = TSP(nodes, minimumDistance, 0, nodes)
 
         flag1 = False
-
+        flag2 = False
 pygame.quit()

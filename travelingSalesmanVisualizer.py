@@ -3,6 +3,7 @@ from collections import deque
 import pygame
 from queue import PriorityQueue
 import time
+import math
 
 pygame.init()
 screenWidth = 500
@@ -78,16 +79,14 @@ def draw(grid, nodes, minimum, percent):
     renderText(minimum, percent)
     pygame.display.flip()
 
-def drawing(grid):
-    drawBoxes(grid)
-    pygame.draw.line(screen, BLACK, (0, screenWidth), (screenWidth, screenWidth))
+
 
 def renderText(minimum, percent):
     text1 = font.render("percent finished: ", False, BLACK)
     text2 = font.render("minimum distance: ", False, BLACK)
     screen.blit(text1, (100, screenWidth + 100))
     screen.blit(text2, (100, screenWidth + 50))
-    text3 = font.render(f"{minimum}", False, BLACK)
+    text3 = font.render("{:.2f}".format(minimum), False, BLACK)
     format_float = "{:.2f}".format(percent)
     text4 = font.render(f"{format_float}", False, BLACK)
     screen.blit(text3, (300, screenWidth + 50))
@@ -111,7 +110,10 @@ def gridAndNeighbors():
 def heuristic(p1, p2):
     x1, y1 = p1.get_pos()
     x2, y2 = p2.get_pos()
-    return abs(x1 - x2) + abs(y1 - y2)
+    changex = abs(x1 - x2)
+    changey = abs(y1 - y2)
+    total = "{:.2f}".format(math.sqrt((changex**2)+(changey**2)))
+    return float(total)
 
 def drawLines(nodes):
     for i in range(len(nodes)-1):
@@ -131,39 +133,55 @@ def factorial(num):
         return num * factorial(num-1)
 
 
-def TSP(nodes, minimum, totalcount, lowest):
+def TSP(nodes, minimum, mindistance, oglength, total, totalcount, percent):
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                pygame.quit()
+    if len(nodes) == 0:
+        return []
 
-    totalcount = totalcount
-    total = factorial(len(nodes))
-    percentage = (totalcount/total) * 100
-    lowestPath = lowest
-    current = nodes
-    print(str(current) + "current")
-    for i in range(len(nodes)-1):
+            # If there is only one element in lst then, only
+            # one permutation is possible
+    if len(nodes) == 1:
+        return [nodes]
 
-        val2 = current.pop(i+1)
-        val = current.pop(i)
-        current = [val2] + [val] + current
-        print(current)
+            # Find the permutations for lst if there are
+            # more than 1 characters
 
-        totalcount += 1
-        percentage = (totalcount/total) * 100
-        dist = calcTotalDistance(current)
+    l = [] # empty list that will store current permutation
 
-        if dist < minimum:
-            minimum = dist
-            lowestPath = current
+            # Iterate the input(lst) and calculate the permutation
+    for i in range(len(nodes)):
+        m = nodes[i]
 
-        draw(grid, current, minimum, percentage)
+            # Extract lst[i] or m from the list. remLst is
+            # remaining list
+        remLst = nodes[:i] + nodes[i+1:]
 
-        if totalcount >= total:
-            return lowestPath, minimum, percentage
+            # Generating all permutations where m is first
+            # element
+        for p in TSP(remLst, minimum, mindistance, oglength, total, totalcount, percent):
+            path = [m] + p
+            l.append(path)
+            if len(path) == oglength:
+                currdist = calcTotalDistance(path)
+                if currdist < mindistance:
+                    mindistance = currdist
+                    minimum = path
+                totalcount += 1
+                percent = (totalcount / total) * 100
+                draw(grid, path, mindistance, percent)
+                l.pop(0)
 
-        if i == len(nodes)-1:
-            print("\n")
-            lowestPath, minimum, percentage = TSP(current, minimum, totalcount, lowestPath)
 
-    return lowestPath, minimum, percentage
+    if percent < 100:
+        return l
+    else:
+        return minimum, mindistance, percent
+    
 
 
 
@@ -174,7 +192,7 @@ def TSP(nodes, minimum, totalcount, lowest):
 grid = gridAndNeighbors()
 percentage = 0
 minimumDistance = float("inf")
-totalNodes = 3
+totalNodes = 7
 nodes = []
 ready = True
 flag2 = True
@@ -224,8 +242,9 @@ while run:
 
     draw(grid, nodes, minimumDistance, percentage)
     if flag1 and flag2:
-
-        nodes, minimumDistance, percentage = TSP(nodes, minimumDistance, 0, nodes)
+        total = factorial(len(nodes))
+        percentage = (1/total) * 100
+        nodes, minimumDistance, percentage = TSP(nodes, nodes, minimumDistance, len(nodes), total, 0, percentage)
 
         flag1 = False
         flag2 = False

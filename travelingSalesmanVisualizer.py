@@ -71,26 +71,30 @@ def drawBoxes(grid):
             box.draw()
 
 
-def draw(grid, nodes, minimum, percent):
+def draw(grid, nodes, minimum, percent, totalNodes):
     screen.fill(WHITE)
     drawBoxes(grid)
     drawLines(nodes)
     pygame.draw.line(screen, BLACK, (0, screenWidth), (screenWidth, screenWidth))
-    renderText(minimum, percent)
+    renderText(minimum, percent, totalNodes)
     pygame.display.flip()
 
 
 
-def renderText(minimum, percent):
+def renderText(minimum, percent, totalNodes):
     text1 = font.render("percent finished: ", False, BLACK)
     text2 = font.render("minimum distance: ", False, BLACK)
+    text5 = font.render("number of nodes: ", False, BLACK)
+    screen.blit(text5, (100, screenWidth + 150))
     screen.blit(text1, (100, screenWidth + 100))
     screen.blit(text2, (100, screenWidth + 50))
     text3 = font.render("{:.2f}".format(minimum), False, BLACK)
     format_float = "{:.2f}".format(percent)
     text4 = font.render(f"{format_float}", False, BLACK)
+    text6 = font.render(f"{totalNodes}", False, BLACK)
     screen.blit(text3, (300, screenWidth + 50))
     screen.blit(text4, (300, screenWidth + 100))
+    screen.blit(text6, (300, screenWidth + 150))
 
 def get_pos(x, y):
     newx = x // diff
@@ -133,7 +137,7 @@ def factorial(num):
         return num * factorial(num-1)
 
 
-def TSP(nodes, minimum, mindistance, oglength, total, totalcount, percent):
+def TSP(nodes, minimum, mindistance, oglength, total, totalcount, percent, totalNodes):
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
@@ -143,27 +147,19 @@ def TSP(nodes, minimum, mindistance, oglength, total, totalcount, percent):
     if len(nodes) == 0:
         return []
 
-            # If there is only one element in lst then, only
-            # one permutation is possible
     if len(nodes) == 1:
         return [nodes]
 
-            # Find the permutations for lst if there are
-            # more than 1 characters
 
-    l = [] # empty list that will store current permutation
+    l = []
 
-            # Iterate the input(lst) and calculate the permutation
+
     for i in range(len(nodes)):
         m = nodes[i]
 
-            # Extract lst[i] or m from the list. remLst is
-            # remaining list
         remLst = nodes[:i] + nodes[i+1:]
 
-            # Generating all permutations where m is first
-            # element
-        for p in TSP(remLst, minimum, mindistance, oglength, total, totalcount, percent):
+        for p in TSP(remLst, minimum, mindistance, oglength, total, totalcount, percent, totalNodes):
             path = [m] + p
             l.append(path)
             if len(path) == oglength:
@@ -173,7 +169,7 @@ def TSP(nodes, minimum, mindistance, oglength, total, totalcount, percent):
                     minimum = path
                 totalcount += 1
                 percent = (totalcount / total) * 100
-                draw(grid, path, mindistance, percent)
+                draw(grid, path, mindistance, percent, totalNodes)
                 l.pop(0)
 
 
@@ -183,18 +179,14 @@ def TSP(nodes, minimum, mindistance, oglength, total, totalcount, percent):
         return minimum, mindistance, percent
     
 
-
-
-
-
-
-
 grid = gridAndNeighbors()
 percentage = 0
 minimumDistance = float("inf")
 totalNodes = 7
 nodes = []
 ready = True
+go = False
+flag3 = False
 flag2 = True
 flag1 = False
 let = None
@@ -213,6 +205,7 @@ while run:
                 minimumDistance = float("inf")
                 percentage = 0
                 flag2 = True
+                go = False
 
             if event.key == pygame.K_1 and ready:
                 count =  0
@@ -222,6 +215,7 @@ while run:
                         count += 1
                         nodes.append(node)
                 ready = False
+                go = True
                 minimumDistance = calcTotalDistance(nodes)
 
 
@@ -236,16 +230,38 @@ while run:
 
 
         if event.type == pygame.MOUSEBUTTONDOWN:
-            pass
+            flag3 = True
+
+    if flag3 and ready:
+        pos = pygame.mouse.get_pos()
+
+        flag3 = False
+        printnum = True
+        while printnum:
+            nodesText = font.render("input a number", False, BLACK)
+            screen.blit(nodesText, (100, screenWidth + 100))
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    try:
+                        totalNodes = int(event.unicode)
+                        printnum = False
+                    except:
+                        printnum = True
 
 
 
-    draw(grid, nodes, minimumDistance, percentage)
-    if flag1 and flag2:
+
+
+
+
+
+    draw(grid, nodes, minimumDistance, percentage, totalNodes)
+    if flag1 and flag2 and go:
         total = factorial(len(nodes))
         percentage = (1/total) * 100
-        nodes, minimumDistance, percentage = TSP(nodes, nodes, minimumDistance, len(nodes), total, 0, percentage)
+        nodes, minimumDistance, percentage = TSP(nodes, nodes, minimumDistance, len(nodes), total, 0, percentage, totalNodes)
 
         flag1 = False
         flag2 = False
+        go = False
 pygame.quit()
